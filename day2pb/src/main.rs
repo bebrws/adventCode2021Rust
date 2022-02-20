@@ -33,6 +33,7 @@ fn main() -> std::io::Result<()> {
 
     let mut horizontal: u64 = 0;
     let mut depth: u64 = 0;
+    let mut aim: u64 = 0;
 
     let f = File::open("input")?;
     let bf = BufReader::new(f);
@@ -43,11 +44,12 @@ fn main() -> std::io::Result<()> {
         let cmd = command_from_str(l_result.unwrap())?;
         println!("cmd {} {}", cmd.cmd_str, cmd.len);
         if cmd.cmd_str == "down" {
-            depth += cmd.len;
+            aim += cmd.len;
         } else if cmd.cmd_str == "up" {
-            depth -= cmd.len;
+            aim -= cmd.len;
         } else if cmd.cmd_str == "forward" {
             horizontal += cmd.len;
+            depth += cmd.len * aim;
         }
     }
 
