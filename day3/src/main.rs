@@ -5,12 +5,10 @@ use std::vec::Vec;
 
 fn main() -> std::io::Result<()> {
     let mut columns: Vec<Vec<u8>> = Vec::new();
-    // for _i in 0..5 {
-    //     let new_c: Vec<u8> = Vec::new();
-    //     columns.push(new_c);
-    // }
+
     let input_file = File::open("input")?;
     let buf_rd = BufReader::new(input_file);
+    
     for (ln_no, line_res) in buf_rd.lines().enumerate() {
         let line = line_res.unwrap();
         for (c_no, c) in line.chars().enumerate() {
