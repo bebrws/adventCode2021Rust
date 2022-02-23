@@ -44,7 +44,7 @@ fn main() -> std::io::Result<()> {
     
     let mut gamma_rate: u64 = 0;
     for (decimal_place, bit) in most_common.into_iter().rev().enumerate() {
-        gamma_rate += u64::pow(2, decimal_place as u32) * dbg!(bit) as u64;
+        gamma_rate += u64::pow(2, decimal_place as u32) * bit as u64;
     }
     println!("gamma: {:?}", gamma_rate);
 
@@ -69,7 +69,7 @@ fn main() -> std::io::Result<()> {
     
     let mut epsilon_rate: u64 = 0;
     for (decimal_place, bit) in least_common.into_iter().rev().enumerate() {
-        epsilon_rate += u64::pow(2, decimal_place as u32) * dbg!(bit) as u64;
+        epsilon_rate += u64::pow(2, decimal_place as u32) * bit as u64;
     }
     println!("epsilon: {:?}", epsilon_rate);
 
