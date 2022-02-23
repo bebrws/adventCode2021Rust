@@ -53,7 +53,7 @@ fn main() -> std::io::Result<()> {
         for (_b_no, b) in columns.get(c_no).unwrap().into_iter().enumerate() {
             println!("{:}", b);
             if *b == 0 {
-                one_count += 1;
+                one_count += 1; // flippy floppy which count I am incrementing from above
             } else {
                 zero_count += 1;
             }
