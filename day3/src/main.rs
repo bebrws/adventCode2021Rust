@@ -75,5 +75,7 @@ fn main() -> std::io::Result<()> {
 
     println!("power_consumption: {:?}", power_consumption);
 
+    power_consumption.to_string().as_bytes().iter().for_each(|b| print!("{:?}", b));
+
     Ok(())
 }
