@@ -1,8 +1,9 @@
 use std::fs::File;
-// use std::io::prelude::*;
 use std::io::{BufRead, BufReader};
+use std::str;
 use std::vec::Vec;
 
+#[derive(Clone)]
 struct BitColAndRows {
     rows: Vec<Vec<u8>>,
 }
@@ -19,9 +20,7 @@ impl BitColAndRows {
     fn get_col(&self, col_index: usize) -> Vec<u8> {
         self.rows
             .iter()
-            .map(
-                |row| row.get(col_index).unwrap().clone(), //.collect::<Vec<u8>>()).collect::<Vec<Vec<u8>>>();
-            )
+            .map(|row| row.get(col_index).unwrap().clone())
             .collect()
     }
 
@@ -29,15 +28,23 @@ impl BitColAndRows {
         self.rows.remove(row_index);
     }
 
-    fn remove_rows(&mut self, row_indexes: Vec<usize>) {
+    fn remove_rows(&mut self, row_indexes: &Vec<usize>) {
+        let mut row_indexes_to_removed = row_indexes.clone();
+        // We always stop if there is only one row left
+        if row_indexes.len() >= self.rows.len() {
+            row_indexes_to_removed =
+                row_indexes_to_removed[0..row_indexes_to_removed.len() - 2].to_vec();
+        }
         self.rows = self
             .rows
             .iter()
             .enumerate()
-            .filter_map(|(index, val)| match row_indexes.contains(&index) {
-                true => None,
-                false => Some(val.clone()),
-            })
+            .filter_map(
+                |(index, val)| match row_indexes_to_removed.contains(&index) {
+                    true => None,
+                    false => Some(val.clone()),
+                },
+            )
             .collect();
     }
 
@@ -52,11 +59,34 @@ impl BitColAndRows {
     fn get_col_length(&self) -> usize {
         self.rows.get(0).unwrap().len()
     }
+    fn len(&self) -> usize {
+        self.rows.len()
+    }
+
+    fn get_rows(&self) -> Vec<Vec<u8>> {
+        self.rows.clone()
+    }
 }
 
 impl std::fmt::Display for BitColAndRows {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BitColAndRows: rows are {:?}", self.rows)
+        write!(f, "\n")?;
+        for row in &self.rows {
+            let row_str = str::from_utf8(row).unwrap();
+            write!(f, "{}\n", row_str)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::fmt::Debug for BitColAndRows {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\n")?;
+        for row in &self.rows {
+            let row_str = str::from_utf8(row).unwrap();
+            write!(f, "{}\n", row_str)?;
+        }
+        Ok(())
     }
 }
 
@@ -86,164 +116,99 @@ mod test {
     }
 }
 
-fn get_most_common_bit(bit_list: &Vec<u8>) -> u8 {
-    let list_length = bit_list.len();
-    let one_len = bit_list
-        .into_iter()
-        .filter(|&c| *c == 1)
+fn get_most_common_bit(col: &Vec<u8>) -> u8 {
+    let list_length = col.len();
+    let one_len = col
+        .iter()
+        .filter(|&c| *c == '1' as u8)
         .collect::<Vec<&u8>>()
         .len();
     let zero_len = list_length - one_len;
+    dbg!(zero_len);
+    dbg!(one_len);
     match one_len >= zero_len {
-        true => 1,
-        false => 0,
+        true => '1' as u8,
+        false => '0' as u8,
     }
 }
 
-fn get_least_common_bit(bit_list: &Vec<u8>) -> u8 {
-    let list_length = bit_list.len();
-    let one_len = bit_list
-        .into_iter()
-        .filter(|&c| *c == 1)
+fn get_least_common_bit(col: &Vec<u8>) -> u8 {
+    let list_length = col.len();
+    let one_len = col
+        .iter()
+        .filter(|&c| *c == '1' as u8)
         .collect::<Vec<&u8>>()
         .len();
-    match one_len < list_length / 2 {
-        true => 1,
-        false => 0,
+    let zero_len = list_length - one_len;
+    match one_len < zero_len {
+        true => '1' as u8,
+        false => '0' as u8,
     }
 }
-
-fn get_row_from_columns(columns: &Vec<Vec<u8>>, row: &usize) -> Vec<u32> {
-    let mut row_value: Vec<u32> = Vec::new();
-    columns
-        .iter()
-        .for_each(|col| row_value.push(col.get(*row).unwrap().clone() as u32));
-    row_value
-}
-
-fn get_row_index_with_bit(columns: &Vec<Vec<u8>>, get_bit: fn(&Vec<u8>) -> u8) -> usize {
-    let mut rows_kept_by_column: Vec<Vec<u8>> = columns.clone();
-    let mut list_of_row_indexes: Vec<usize> =
-        (0..rows_kept_by_column.get(0).unwrap().len()).collect();
+fn get_row_index_with_bit(bcr: &BitColAndRows, get_bit: fn(&Vec<u8>) -> u8) -> String {
+    let mut bcr_rows_kept_by_column = bcr.clone();
     let mut cur_column = 0;
+
+    println!("The bcr is {}", bcr_rows_kept_by_column);
     loop {
-        // Have to remove the index of the row to remove inside the column.get each loop
-        let bitcol = dbg!(rows_kept_by_column.get(cur_column).unwrap());
-        let most_common_bit = dbg!(get_bit(bitcol));
-        let rows_to_remove: Vec<usize> = rows_kept_by_column
-            .get(cur_column)
-            .unwrap()
+        let cur_col = bcr_rows_kept_by_column.get_col(cur_column);
+        let common_bit = get_bit(&cur_col);
+
+        dbg!(common_bit as char);
+
+        let rows_to_remove: Vec<usize> = bcr_rows_kept_by_column
+            .get_col(cur_column)
             .iter()
             .enumerate()
-            .filter_map(|(row, val)| {
-                if *val != most_common_bit {
-                    Some(row)
+            .filter_map(|(row_index, val)| {
+                println!("val {} != {}", val, common_bit);
+                if *val != common_bit as u8 {
+                    Some(row_index)
                 } else {
                     None
                 }
             })
             .collect();
         dbg!(rows_to_remove.clone());
-        rows_kept_by_column = rows_kept_by_column
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .enumerate()
-                    .filter_map(|(index, val)| match rows_to_remove.contains(&index) {
-                        true => None,
-                        false => Some(val.clone()),
-                    })
-                    .collect()
-            })
-            .collect();
+        bcr_rows_kept_by_column.remove_rows(&rows_to_remove);
+        dbg!(bcr_rows_kept_by_column.clone());
 
-        list_of_row_indexes = list_of_row_indexes
-            .iter()
-            .enumerate()
-            .filter_map(
-                |(row_index, row)| match rows_to_remove.contains(&row_index) {
-                    true => None,
-                    false => Some(row.clone()),
-                },
-            )
-            .collect();
-
-        list_of_row_indexes.iter().for_each(|row_index| {
-            println!("row_index: {}", row_index);
-        });
-
-        dbg!(list_of_row_indexes.len() == rows_kept_by_column.get(0).unwrap().len());
-
-        // dbg!(rows_kept_by_column.clone());
-
-        let row_count = rows_kept_by_column.get(0).unwrap().len();
-
-        for i in 0..row_count {
-            let row: Vec<u8> = rows_kept_by_column
-                .iter()
-                // .enumerate()
-                .map(|row| {
-                    // row.iter().enumerate().filter(|(col_index, val)| {
-                    //     match col_index == i {
-                    //         true => Some(val.clone()),
-                    //         false => None,
-                    //     }
-                    // }).collect()
-                    row.get(i).unwrap().clone()
-                })
-                .collect();
-            println!("Row: {} is {:?}", i, row);
-            //get(i).unwrap().remove(0);
-        }
-
-        dbg!(list_of_row_indexes.clone());
-        if list_of_row_indexes.len() == 1 {
-            break;
+        if bcr_rows_kept_by_column.len() == 1 {
+            return str::from_utf8(&bcr_rows_kept_by_column.get_row(0))
+                .unwrap()
+                .to_owned();
         }
         cur_column += 1;
     }
-    // rows_kept.get(0).unwrap().clone()
-    // Convert column in rows_kep to binary
-    return list_of_row_indexes.get(0).unwrap().clone();
 }
 
-fn decimal_from_bit_vec(bit_vec: Vec<u32>) -> u32 {
-    let mut value: u32 = 0;
-    bit_vec.iter().rev().enumerate().for_each(|(index, val)| {
-        value += u32::pow(2, index as u32) * val;
-    });
-    value
-}
+// Learned about: u32::from_str_radix
+// fn decimal_from_bit_vec(bit_vec: Vec<u32>) -> u32 {
+//     let mut value: u32 = 0;
+//     bit_vec.iter().rev().enumerate().for_each(|(index, val)| {
+//         value += u32::pow(2, index as u32) * val;
+//     });
+//     value
+// }
 fn main() -> std::io::Result<()> {
-    let mut columns: Vec<Vec<u8>> = Vec::new();
+    let mut bcr: BitColAndRows = BitColAndRows::new();
 
-    let input_file = File::open("test_input")?;
+    let input_file = File::open("input")?;
     let buf_rd = BufReader::new(input_file);
 
-    for (ln_no, line_res) in buf_rd.lines().enumerate() {
+    for (_ln_no, line_res) in buf_rd.lines().enumerate() {
         let line = line_res.unwrap();
-        for (c_no, c) in line.chars().enumerate() {
-            if ln_no == 0 {
-                let new_c: Vec<u8> = Vec::new();
-                columns.push(new_c);
-            }
-            let du8 = c.to_digit(10).unwrap() as u8;
-            columns.get_mut(c_no).unwrap().push(du8);
-        }
+        bcr.add_row_from_str(line.as_str());
     }
 
-    // let rows_kept_clone = dbg!(rows_kept.clone()); // One thing I learned is that dbg! consumes the variable, so I need to clone it
-    let final_row = get_row_index_with_bit(&columns, get_most_common_bit);
-    let row = dbg!(get_row_from_columns(&columns, &final_row));
-    let oxygen_rating = decimal_from_bit_vec(row);
+    let final_row = get_row_index_with_bit(&bcr, get_most_common_bit);
+    let oxygen_rating = u32::from_str_radix(&final_row, 2).unwrap();
     println!("Oxygen rating is: {:?}", oxygen_rating);
 
-    let final_row = get_row_index_with_bit(&columns, get_least_common_bit);
-    let row = dbg!(get_row_from_columns(&columns, &final_row));
-    let co2_rating = decimal_from_bit_vec(row);
-    println!("C02 Scrubber rating is: {:?}", co2_rating);
+    let final_co2_row = get_row_index_with_bit(&bcr, get_least_common_bit);
+    let co2_rating = u32::from_str_radix(&final_co2_row, 2).unwrap();
+    println!("CO2 rating is: {:?}", co2_rating);
 
-    println!("Answer is: {:?}", co2_rating * oxygen_rating);
-
+    print!("Final answer is: {}", co2_rating * oxygen_rating);
     Ok(())
 }
